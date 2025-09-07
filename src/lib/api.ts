@@ -47,6 +47,23 @@ export interface UsersResponse {
   users: User[];
 }
 
+export interface ServiceHistoryItem {
+  service_id: string;
+  user_id: string;
+  stage: string;
+  service_provider_id: string | null;
+  category: string;
+  service_type: string;
+  requested_slot: string;
+  feedback: string | null;
+  metadata: unknown;
+  service_cost: string;
+  created_at: string;
+  approved_by_admin: number;
+  note_by_provider: string | null;
+  completed_at: string | null;
+}
+
 export interface UpdateStatusRequest {
   id: string;
   status: "Approved" | "Blocked";
@@ -60,7 +77,8 @@ class ApiService {
   private baseUrl = {
     login: 'https://rlvze63eac.execute-api.ap-southeast-2.amazonaws.com/default/sc01',
     providers: 'https://7c2awsljvh.execute-api.ap-southeast-2.amazonaws.com/default/sc03',
-    users: 'https://0ek3p4mqyl.execute-api.ap-southeast-2.amazonaws.com/default/sc02'
+    users: 'https://0ek3p4mqyl.execute-api.ap-southeast-2.amazonaws.com/default/sc02',
+    history: 'https://ysaobp9yy4.execute-api.ap-southeast-2.amazonaws.com/default/sc004'
   };
 
   private getAuthHeaders() {
@@ -122,6 +140,19 @@ class ApiService {
 
     if (!response.ok) {
       throw new Error('Failed to fetch users');
+    }
+
+    return response.json();
+  }
+
+  async getServiceHistory(): Promise<ServiceHistoryItem[]> {
+    const response = await fetch(this.baseUrl.history, {
+      method: 'GET',
+      headers: this.getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch service history');
     }
 
     return response.json();

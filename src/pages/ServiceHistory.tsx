@@ -1,99 +1,89 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { History, Clock, User, Wrench } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { History } from "lucide-react";
+import { useEffect, useState } from "react";
+import { apiService, type ServiceHistoryItem } from "@/lib/api";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ServiceHistory() {
-  // Placeholder data - replace with actual API integration
-  const mockHistory = [
-    {
-      id: "1",
-      service: "Plumbing",
-      customer: "John Doe",
-      provider: "Mike Wilson",
-      status: "completed",
-      requestedAt: "2025-08-27T10:00:00",
-      completedAt: "2025-08-27T12:30:00"
-    },
-    {
-      id: "2", 
-      service: "Electrical",
-      customer: "Jane Smith",
-      provider: "Alex Johnson",
-      status: "in-progress",
-      requestedAt: "2025-08-27T09:15:00",
-      completedAt: null
-    }
-  ];
+  const [history, setHistory] = useState<ServiceHistoryItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const { toast } = useToast();
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "bg-success text-success-foreground";
-      case "in-progress":
-        return "bg-warning text-warning-foreground";
-      case "pending":
-        return "bg-muted text-muted-foreground";
-      default:
-        return "bg-muted text-muted-foreground";
-    }
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await apiService.getServiceHistory();
+        setHistory(data);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to fetch service history",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  const formatDateTime = (value: string | null) => {
+    if (!value) return "-";
+    const date = new Date(value.replace(" ", "T"));
+    return isNaN(date.getTime()) ? value : date.toLocaleString();
   };
 
   return (
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Service History</h1>
-        <p className="text-muted-foreground">Track all service requests and their status</p>
+        <p className="text-muted-foreground">Track all service requests</p>
       </div>
 
-      <div className="grid gap-4">
-        {mockHistory.map(item => (
-          <Card key={item.id}>
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <Wrench className="h-5 w-5 text-primary" />
-                    <h3 className="font-semibold text-lg">{item.service} Service</h3>
-                    <Badge className={getStatusColor(item.status)}>
-                      {item.status.replace('-', ' ')}
-                    </Badge>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div className="flex items-center space-x-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span>Customer: {item.customer}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span>Provider: {item.provider}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>Requested: {new Date(item.requestedAt).toLocaleString()}</span>
-                    </div>
-                    {item.completedAt && (
-                      <div className="flex items-center space-x-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span>Completed: {new Date(item.completedAt).toLocaleString()}</span>
+      {loading ? (
+        <div className="flex items-center justify-center min-h-48">
+          <LoadingSpinner size={28} />
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Service Type</TableHead>
+                  <TableHead>Requested Slot</TableHead>
+                  <TableHead>Service Cost</TableHead>
+                  <TableHead>Request Raised</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {history.map(item => (
+                  <TableRow key={item.service_id}>
+                    <TableCell className="capitalize">{item.category}</TableCell>
+                    <TableCell>{item.service_type}</TableCell>
+                    <TableCell>{formatDateTime(item.requested_slot)}</TableCell>
+                    <TableCell>₹{item.service_cost}</TableCell>
+                    <TableCell>{formatDateTime(item.created_at)}</TableCell>
+                  </TableRow>
+                ))}
+                {history.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      <div className="flex flex-col items-center gap-2">
+                        <History className="h-6 w-6 opacity-50" />
+                        <span>No service history available</span>
                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-
-        {mockHistory.length === 0 && (
-          <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No service history available</p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
